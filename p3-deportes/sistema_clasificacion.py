@@ -228,3 +228,6 @@ if __name__ == "__main__":
     # Ejercicio 10
     sc.registrar_traspaso(1, "Sofia Garcia", "Leones FC", "Aguilas Deportivas", 1)
     sc.r.hgetall(f"jugador:{sc.r.get("Sofia Garcia")}")
+
+
+    sc.r.close()

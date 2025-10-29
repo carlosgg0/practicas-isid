@@ -1,218 +1,243 @@
+from pymongo import MongoClient
+from pprint import pprint
+import json
+import os
 import pymongo
-from datetime import datetime
 
-class TechWorld:
-    def __init__(self):
-        self.client = pymongo.MongoClient("mongodb://admin:admin@localhost:27017/")
-        self.db = self.client["practica6"]
-        self.db["clientes"].drop()
-        self.db["productos"].drop()
-        self.db["ventas"].drop()
+# Establecemos la conexión e insertamos los datos
+client = MongoClient("mongodb://admin:admin@localhost:27017/")
+db = client["practica6"]
+clientes, productos, ventas = db["clientes"], db["productos"], db["ventas"]
 
-    def insertar_clientes(self):
-        self.db["clientes"].insert_many([
-            {
-                "nombre": "Ana García",
-                "email": "ana@techworld.com",
-                "ciudad": "Madrid",
-                "premium": True,
-                "fecha_registro": datetime(2023, 12, 1)
-            },
-            {
-                "nombre": "Carlos López", 
-                "email": "carlos@techworld.com",
-                "ciudad": "Barcelona",
-                "premium": False,
-                "fecha_registro": datetime(2024, 1, 15)
-            },
-            {
-                "nombre": "María Rodríguez",
-                "email": "maria@techworld.com", 
-                "ciudad": "Madrid",
-                "premium": True,
-                "fecha_registro": datetime(2023, 11, 20)
+def insertar_datos() -> None:
+    clientes.drop()
+    productos.drop()
+    ventas.drop()
+    
+    script_dir = os.path.dirname(__file__)
+    print("Script directory: ", script_dir)
+
+    collections_to_load = ["clientes", "productos", "ventas"]
+    
+    for collection_name in collections_to_load:
+        file_path = os.path.join(script_dir, f"{collection_name}.json")
+        print(f"Loading data from: {file_path}")
+
+        try:
+            with open(file_path, "r") as f:
+                data = json.load(f)
+                if data:
+                    db[collection_name].insert_many(data)
+                    print(f"Successfully inserted data into {collection_name}.")
+                else:
+                    print(f"{collection_name}.json is empty!")
+        
+        except FileNotFoundError:
+            print(f"ERROR: The file {collection_name}.json was not found at {file_path}")
+        except json.JSONDecodeError:
+            print(f"ERROR: Could not parse {collection_name}.json. Please check if it is valid.")
+
+def mostrar_resultado(cursor) -> None:
+    for doc in cursor:
+        pprint(doc)
+    print()
+
+def obtener_productos():
+    mostrar_resultado(productos.find())
+    
+def obtener_productos_activos():
+    print("Productos Activos:\n")
+    res = productos.find(
+        {"activo": True}
+    )
+    mostrar_resultado(res)
+
+def obtener_computadoras():
+    print("Computadoras:\n")
+    res = productos.find(
+        {"categoria": "computadoras"}
+    )
+    mostrar_resultado(res)
+
+def obtener_productos_premium():
+    print("Productos Premium:\n")
+    res = productos.find(
+        {"precio": {"$gt": 500}}
+    )
+    mostrar_resultado(res)
+
+def obtener_clientes_premium():
+    print("Clientes Premium:\n")
+    res = clientes.find(
+        {"premium" : True}
+    )
+    mostrar_resultado(res)
+
+
+
+
+def actualizar_precio(nombre_prod: str, nuevo_precio: int):
+    res = productos.update_one(
+        {"nombre": nombre_prod},
+        {"$set": {"precio": nuevo_precio}}
+    )
+    print(res.modified_count)
+
+def activar_productos_inactivos(stock: int):
+    res = productos.update_many(
+        {"activo": False},
+        {"$set": {"stock": 10}}
+    )
+    print(res.modified_count)
+
+def aplicar_descuento_marca(descuento: float, marca: str) -> int:
+    res = productos.update_many(
+        {"marca": marca},
+        {"$mul": {"precio": descuento}}
+    )
+    print(res.modified_count)
+
+def incrementar_stock(umbral: int, incr: int) -> int:
+    res = productos.update_many(
+        {"stock": {"$lt": umbral}},
+        {"$inc": {"stock": incr}}
+    )
+    print(res.modified_count)
+
+def ejercicio_14():
+    pipeline = [
+        {
+            '$group': {
+                '_id': '$categoria', 
+                'cantidad_total': {
+                    '$count': {}
+                }, 
+                'precio_promedio': {
+                    '$avg': '$precio'
+                }, 
+                'stock_total': {
+                    '$sum': '$stock'
+                }, 
+                'precio_mas_caro': {
+                    '$max': '$precio'
+                }, 
+                'lista_productos': {
+                    '$push': '$nombre'
+                }
             }
-        ])
-
-    def insertar_productos(self):
-        self.db["productos"].insert_many([
-            {
-                "_id": 1,
-                "nombre": "Laptop Gaming Pro",
-                "categoria": "computadoras",
-                "precio": 1500,
-                "stock": 8,
-                "marca": "ASUS",
-                "tags": ["gaming", "portatil", "rendimiento"],
-                "fecha_ingreso": datetime(2024, 1, 10),
-                "activo": True
-            },
-            {
-                "_id": 2,
-                "nombre": "Smartphone Galaxy",
-                "categoria": "moviles", 
-                "precio": 799,
-                "stock": 25,
-                "marca": "Samsung",
-                "tags": ["android", "5G", "camara"],
-                "fecha_ingreso": datetime(2024, 2, 15),
-                "activo": True
-            },
-            {
-                "_id": 3,
-                "nombre": "Tablet iPad",
-                "categoria": "tablets",
-                "precio": 599,
-                "stock": 15,
-                "marca": "Apple",
-                "tags": ["apple", "creatividad", "portatil"],
-                "fecha_ingreso": datetime(2024, 1, 25),
-                "activo": True
-            },
-            {
-                "_id": 4,
-                "nombre": "Auriculares Bluetooth",
-                "categoria": "audio",
-                "precio": 299,
-                "stock": 0,
-                "marca": "Sony", 
-                "tags": ["audio", "inalambrico", "calidad"],
-                "fecha_ingreso": datetime(2024, 3, 1),
-                "activo": False
+        }, {
+            '$sort': {
+                'cantidad_todal': -1
             }
-        ])
+        }
+    ]   
+    aggCursor = productos.aggregate(pipeline)
+    mostrar_resultado(aggCursor)
 
-    def insertar_ventas(self):
-        self.db["ventas"].insert_many([
-            {
-                "producto_id": 1,
-                "cliente_email": "ana@techworld.com",
-                "cantidad": 1,
-                "total": 1500,
-                "fecha": datetime(2024, 3, 15),
-                "ciudad": "Madrid"
-            },
-            {
-                "producto_id": 2,
-                "cliente_email": "carlos@techworld.com", 
-                "cantidad": 2,
-                "total": 1598,
-                "fecha": datetime(2024, 3, 16),
-                "ciudad": "Barcelona"
-            },
-            {
-                "producto_id": 3,
-                "cliente_email": "maria@techworld.com",
-                "cantidad": 1, 
-                "total": 599,
-                "fecha": datetime(2024, 3, 17),
-                "ciudad": "Madrid"
+def ejercicio_15():
+    pipeline = [    
+        {
+            '$lookup': {
+                'from': 'productos', 
+                'localField': 'producto_id', 
+                'foreignField': '_id', 
+                'as': 'info_producto'
             }
-        ])
+        }, {
+            '$unwind': '$info_producto'
+        }, {
+            '$project': {
+                '_id': 0, 
+                'cliente': '$cliente_email', 
+                'producto': '$info_producto.nombre', 
+                'categoria': '$info_producto.categoria', 
+                'marca': '$info_producto.marca', 
+                'cantidad': '$cantidad', 
+                'total': '$total', 
+                'ciudad': '$ciudad'
+            }
+        }
+    ]
 
-    def obtener_productos(self):
-        print("Todos los productos:\n")
-        res = self.db["productos"].find({})
-        for r in res:
-            print(r)
-        print("\n")
+    aggCursor = ventas.aggregate(pipeline)
+    mostrar_resultado(aggCursor)
 
-    def obtener_productos_activos(self):
-        print("Productos Activos:\n")
-        res = self.db["productos"].find(
-            {"activo": True}
-        )
-        for r in res:
-            print(r)
-        print("\n")
+def ejercicio_16():
+    pipeline = [
+        {
+            '$group': {
+                '_id': '$ciudad', 
+                'total_ventas': {
+                    '$sum': '$total'
+                }, 
+                'total_transacciones': {
+                    '$sum': '$cantidad'
+                }, 
+                'promedio_venta_transaccion': {
+                    '$avg': '$total'
+                }
+            }
+        }, {
+            '$sort': {
+                'total_ventas': -1
+            }
+        }
+    ]
+    mostrar_resultado(ventas.aggregate(pipeline))
 
-    def obtener_productos_categoria_computadoras(self):
-        print("Computadoras:\n")
-        res = self.db["productos"].find(
-            {"categoria": "computadoras"}
-        )
-        for r in res:
-            print(r)
-        print("\n")
 
-    def obtener_productos_premium(self):
-        print("Productos Premium:\n")
+def main():    
+    # Tarea 1: Poblado inicial de los catálogos
+    insertar_datos()
 
-        res = self.db["productos"].find(
-            {"precio": {"$gt": 500}}
-        )
-        for r in res:
-            print(r)
+    # Tarea 2: Consultas
+    obtener_productos()
+    obtener_productos_activos()
+    obtener_computadoras()
+    obtener_productos_premium()
+    obtener_clientes_premium()
 
-        print("\n")
+    # Tarea 3: Actualizaciones
+    actualizar_precio(nombre_prod="Auriculares Bluetooth", nuevo_precio=249)
+    activar_productos_inactivos(stock=10)
+    aplicar_descuento_marca(descuento=0.9, marca="Apple")
+    incrementar_stock(umbral=10, incr=5)
 
-    def obtener_clientes_premium(self):
-        print("Clientes Premium:\n")
-        res = self.db["clientes"].find(
-            {"premium": True}
-        )
-        for r in res:
-            print(r)
+    # Tarea 4: Índices
+    productos.create_index("nombre")
+    productos.create_index([("categoria", pymongo.ASCENDING), ("precio", pymongo.DESCENDING)])
+    clientes.create_index("email", unique=True)
+    mostrar_resultado(productos.list_indexes())
 
-        print("\n")
+    # Tarea 5: Agregaciones
+    ejercicio_14()
+    ejercicio_15()
+    ejercicio_16()
 
-    def actualizar_precio(self, nombre_producto: str, nuevo_precio: int) -> int:
-        # Devuelve el número de elementos modificados 
-        res = self.db["productos"].update_one(
-            {"nombre": nombre_producto},
-            {"$set": {"precio": nuevo_precio}}
-        )
-        return res.modified_count
+    # Tarea 6: Borrado
+    productos.insert_one(
+        {
+            "_id": 5,
+            "nombre": "SmartWatch Samsung",
+            "categoria": "relojes",
+            "precio": 199.99,
+            "stock": 15,
+            "marca": "Apple",
+            "tags": [
+                "samsung",
+                "smartwatch",
+                "reloj"
+            ],
+            "fecha_ingreso": "2024-1-25",
+            "activo": True
+        }
+    )
 
-    def activar_productos_inactivos(self, stock: int) ->int:
-        # Devuelve el número de elementos modificados
-        res = self.db["productos"].update_many(
-            {"activo": False},
-            {"$set": {"stock": 10}}
-        )
-        return res.modified_count
-
-    def aplicar_descuento_marca(self, descuento: float, marca: str) -> int:
-        # Devuelve el número de elementos modificados
-        res = self.db["productos"].update_many(
-            {"marca": marca},
-            {"$mul": {"precio": descuento}}
-        )
-        return res.modified_count
-
-    def incrementar_stock(self, umbral: int, incr: int) -> int:
-        # Devuelve el número de elementos modificados
-        res = self.db["productos"].update_many(
-            {"stock": {"$lt": umbral}},
-            {"$inc": {"stock": incr}}
-        )
-        return res.modified_count
-
+    res = productos.delete_one(
+        {"nombre": "SmartWatch Samsung"}
+    )
+    print(res)
 
 
 if __name__ == "__main__":
-    tw = TechWorld()
-
-    # Tarea 1: Poblado inicial de los catálogos
-    tw.insertar_clientes()
-    tw.insertar_productos()
-    tw.insertar_ventas()
-
-    # Tarea 2: Consultas
-    tw.obtener_productos()
-    tw.obtener_productos_activos()
-    tw.obtener_productos_categoria_computadoras()
-    tw.obtener_productos_premium()
-    tw.obtener_clientes_premium()
-
-    # Tarea 3: Actualizaciones
-    tw.actualizar_precio(nombre_producto="Auriculares Bluetooth", nuevo_precio=249)
-    tw.activar_productos_inactivos(stock=10)
-    tw.aplicar_descuento_marca(descuento=0.9, marca="Apple")
-    tw.incrementar_stock(umbral=5, incr=10)
-
-    # Tarea 4: Índices
-    tw.db["productos"].create_index({"nombre": 1}, {"name": "nombre"})
-    tw.db["productos"].create_index({"categoria": 1, "precio": -1}, {"name": "categoria y precio"})
-    tw.db["clientes"].create_index({"email": 1}, {"unique": True})
-    tw.db["productos"].list_indexes()
+    main()

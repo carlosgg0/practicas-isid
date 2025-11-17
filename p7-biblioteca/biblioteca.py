@@ -138,6 +138,34 @@ def ejercicio8():
         pprint.pprint(r)
 
 
+def ejercicio9():
+    res = db.prestamos.aggregate([
+        {"$lookup": {
+            "from": "estudiantes",
+            "localField": "estudiante_id",
+            "foreignField": "_id",
+            "as": "datos_estudiante"
+        }},
+        {"$lookup": {
+            "from": "libros", 
+            "localField": "libro_id",
+            "foreignField": "_id",
+            "as": "datos_libro"
+        }},
+        {"$unwind": "$datos_estudiante"},
+        {"$unwind": "$datos_libro"},
+        {"$project": {
+            "_id": 0,
+            "nombre_estudiante": "$datos_estudiante.nombre",
+            "titulo_libro": "$datos_libro.titulo",
+            "fecha_prestamo": "$fecha_prestamo",
+            "fecha_devolucion": "$fecha_devolucion",
+            "estado": "$estado",
+            "carrera_estudiante": "$datos_estudiante.carrera"
+        }}
+    ])
+    for r in res:
+        pprint.pprint(r)
 
 def main():
     insertar_datos()
@@ -157,5 +185,10 @@ def main():
     ejercicio6()
 
     ejercicio7()
+
+    ejercicio8()
+
+    ejercicio9()
+    
 if __name__ == "__main__":
     main()

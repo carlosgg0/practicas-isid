@@ -1,0 +1,16 @@
+[
+            {
+                "fecha_prestamo": "2024-02-10",
+                "fecha_devolucion": "2024-02-24",
+                "fecha_devolucion_real": null,
+                "estado": "activo",
+                "multa": 0
+            },
+            {
+                "fecha_prestamo": "2024-02-05",
+                "fecha_devolucion": "2024-02-19",
+                "fecha_devolucion_real": "2024-02-18",
+                "estado": "devuelto",
+                "multa": 0
+            }
+]

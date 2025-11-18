@@ -8,7 +8,7 @@
                 "ciudad": "Madrid",
                 "fecha_registro": "2022-09-01",
                 "activo": true
-            },
+            },  
             {
                 "nombre": "Carlos Rodríguez Martín",
                 "email": "carlos.rodriguez@universidad.edu", 

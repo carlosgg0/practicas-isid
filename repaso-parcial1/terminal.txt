@@ -1,0 +1,205 @@
+Ejercicio 2
+
+db.alumnos.updateOne(
+    {nombre: "Clara", apellido: "Jiménez"},
+    {$set: {
+        "direccion.ciudad": "Madrid",
+        "direccion.cp": "28001"
+    }}
+)
+
+Ejercicio 3
+
+db.alumnos.updateMany(
+    {carrera: "Ing. Informática"},
+    {$inc: {edad: 1}}
+)
+
+Ejercicio 4
+
+db.alumnos.updateOne(
+    {$and: [{"nombre": "David"}, {"apellido": "Ruiz"}]},
+    {$set: {
+        email: "davidruiz@email.com"
+    }}
+)
+
+Ejercicio 5
+
+db.alumnos.insertOne(
+    {
+        nombre: "Carlos",
+        apellido: "García",
+        edad: 23,
+        carrera: "Ing. Informática",
+        direccion: { calle: "C/ Victoria", ciudad: "Málaga", cp: "29004" },
+        intereses: ["Criptografía", "Computación Cuántica"],
+        matriculas: [
+            { asignatura_id: ObjectId("675a61b8c9b83c4b3f012346"), nota: 8.0, año: 2022 }
+        ]
+    }
+)
+
+db.alumnos.deleteOne(
+    {nombre: "Carlos"}
+)
+
+Ejercicio 6
+
+db.alumnos.find(
+    {edad: {$gte: 22}}
+)
+
+Ejercicio 7
+
+db.alumnos.find(
+    {},
+    {
+        _id: 0, // Por defecto se incluye
+        nombre: 1,
+        apellido: 1,
+        carrera: 1
+    }
+)
+
+Ejercicio 8
+
+db.alumnos.find(
+    {carrera: "Ing. Informática", intereses: "IA"}
+)
+
+db.alumnos.find(
+    {$or: [
+        {carrera: "Ing. Informática"},
+        {intereses: "IA"}
+    ]}
+)
+
+Ejercicio 9
+
+db.alumnos.find(
+    {"direccion.ciudad": "Málaga"}
+)
+
+Ejercicio 10
+
+db.alumnos.find(
+    {intereses: "Desarrollo Web"}
+)
+
+Ejercicio 11
+
+db.alumnos.find().sort(
+    {edad: -1}
+).limit(2)
+
+Ejercicio 12
+
+db.alumnos.find(
+    {telefono: {$exists: true}} 
+)
+
+db.alumnos.find(
+    {edad: {$type: "int"}}
+)
+
+Ejercicio 13
+
+db.alumnos.createIndex(
+    {carrera: 1}
+)
+
+Ejercicio 14
+
+db.alumnos.find(
+    {carrera: "Ing. Informática"}
+).explain()
+
+Ejercicio 15
+
+db.alumnos.createIndex(
+    {carrera: 1, edad: -1}
+)
+
+Ejercicio 16
+
+db.alumnos.aggregate([
+    {$group: {
+        _id: "$carrera",
+        total_alumnos: {$sum: 1}
+    }}
+])
+
+Ejercicio 17
+
+db.asignaturas.aggregate([
+    {$group: {
+        _id: "$departamento",
+        creditos_promedio: {$avg: "$creditos"},
+        creditos_max: {$max: "$creditos"},
+        creditos_min: {$min: "$creditos"}
+    }}
+])
+
+Ejercicio 18
+
+db.alumnos.aggregate([
+    {$unwind: "$intereses"},
+    {$project: {
+        "_id": 0,
+        "nombre": 1,
+        "apellido": 1,
+        "interes": "$intereses"
+    }}
+])
+
+Ejercicio 19
+
+db.alumnos.aggregate([
+    {$unwind: "$intereses"},
+    {$group: {
+        _id: "$intereses",
+        num_total: {$sum: 1}
+    }}
+])
+
+Ejercicio 20
+
+db.alumnos.aggregate([
+    {$unwind: "$matriculas"},
+    {$group: {
+        _id: "$_id",
+        nota_media: {$avg: "$matriculas.nota"}
+    }}
+])
+
+Ejercicio 21
+
+db.asignaturas.aggregate([
+    {$lookup: {
+        from: "profesores",
+        localField: "profesor_id",
+        foreignField: "_id",
+        as: "datos_profesor"
+    }}
+])
+
+
+Ejercicio 22
+
+db.alumnos.aggregate([
+    {$unwind: "$matriculas"},
+    {$lookup: {
+        from: "asignaturas",
+        localField: "matriculas.asignatura_id",
+        foreignField: "_id",
+        as: "datos_asignaturas"
+    }},
+    {$unwind: "$datos_asignaturas"},
+    {$group: {
+        _id: {nombre: "$nombre", apellido: "$apellido"},
+        asignaturas_matriculadas: {
+            $push: "$datos_asignaturas.nombre"
+        }
+    }}
+])

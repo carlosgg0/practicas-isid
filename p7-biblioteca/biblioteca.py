@@ -12,13 +12,13 @@ libros = db["libros"]
 prestamos = db["prestamos"]
 
 def insertar_datos():
+    print("\nPoblado inicial de la base de datos: \n")
     categorias.drop()
     estudiantes.drop()
     libros.drop()
     prestamos.drop()
 
     script_dir = os.path.dirname(__file__)
-    print(script_dir)
     collections_to_load = ["categorias", "estudiantes", "libros", "prestamos"]
 
     for collection in collections_to_load:
@@ -60,6 +60,7 @@ def actualizar_stock_libro(nombre: str, nuevo_stock: int):
     print(res.raw_result)
 
 def add_campo_descuento_libros_antes(descuento: int, year: int):
+
     res = libros.update_many(
         {"año_publicacion": {"$lt": 2000}},
         {"$set": {"descuento": descuento}}
@@ -67,6 +68,8 @@ def add_campo_descuento_libros_antes(descuento: int, year: int):
     print(res.raw_result)
 
 def ejercicio3():
+    print("\nEjercicio 3\n")
+
     res = categorias.update_one(
         {"nombre": "Matemáticas"},
         {
@@ -78,6 +81,8 @@ def ejercicio3():
     print(res.raw_result)
 
 def ejercicio4():
+    print("\nEjercicio 4\n")
+
     res = libros.find(
         {"disponible": True}
     )
@@ -85,6 +90,8 @@ def ejercicio4():
         pprint.pprint(i)
 
 def ejercicio5():
+    print("\nEjercicio 5\n")
+
     res = estudiantes.find(
         {"carrera": "Ingeniería Informática"}
     )
@@ -92,6 +99,8 @@ def ejercicio5():
         pprint.pprint(r)
 
 def ejercicio6():
+    print("\nEjercicio 6\n")
+
     res = libros.find(
         {"precio": {"$gt": 20}}
     )
@@ -100,6 +109,8 @@ def ejercicio6():
         pprint.pprint(r)
 
 def ejercicio7():
+    print("\nEjercicio 7\n")
+
     res = libros.aggregate([
         {"$match": {"disponible": True}},
         {"$group":{
@@ -115,6 +126,8 @@ def ejercicio7():
         pprint.pprint(r)
 
 def ejercicio8():
+    print("\nEjercicio 8\n")
+
     res = libros.aggregate([
         {
             '$bucket': {
@@ -139,7 +152,9 @@ def ejercicio8():
 
 
 def ejercicio9():
-    res = db.prestamos.aggregate([
+    print("\nEjercicio 9\n")
+
+    res = prestamos.aggregate([
         {"$lookup": {
             "from": "estudiantes",
             "localField": "estudiante_id",
@@ -167,6 +182,74 @@ def ejercicio9():
     for r in res:
         pprint.pprint(r)
 
+def ejercicio10():
+    print("\nEjercicio 10\n")
+
+    res = estudiantes.aggregate([
+        #{"$match": {"activo": True}},
+        {"$group": {
+            "_id": "$ciudad",
+            "total_estudiantes": {"$sum": 1},
+            "edad_promedio": {"$avg": "$edad"},
+            "carreras_unicas": {"$addToSet": "$carrera"},
+            "nombres_estudiantes": {"$addToSet": "$nombre"}
+        }},
+        {"$project": {
+            "nombre_ciudad": "$_id",
+            "total_estudiantes": 1,
+            "edad_promedio": {"$round": ["$edad_promedio", 0]},
+            "carreras_unicas": 1,
+            "nombres_estudiantes": 1
+        }}
+    ])
+    for r in res:
+        pprint.pprint(r)
+
+def ejercicio11():
+    print("\nEjercicio 11\n")
+
+    estudiantes.insert_one(
+        {
+            "nombre": "estudiante nuevo para eliminar",
+            "email": "nomeimporta@gmail.com", 
+            "carrera": "Filosofía",
+            "semestre": 6,
+            "edad": 21,
+            "ciudad": "Málaga",
+            "fecha_registro": "2023-01-15",
+            "activo": False   
+        }
+    )
+    res = estudiantes.find_one({"nombre": "estudiante nuevo para eliminar"})
+    pprint.pprint(res)
+
+    # Lo eliminamos
+    estudiantes.delete_one({"nombre": "estudiante nuevo para eliminar"})
+    res = estudiantes.find()
+    print("Estudiantes tras la eliminación")
+    for r in res:
+        pprint.pprint(r)
+
+
+def ejercicio12():
+    print("\nEjercicio 12 \n")
+
+    res = libros.update_many(
+        {"genero": "Programación"},
+        {"$set": {
+            "ubicacion": "Sala de ordenadores",
+            "etiqueta_especial": "Tecnología"
+        }}
+    )
+
+    pprint.pprint(res.raw_result)
+
+    print("\nLibros de la categoría Programación tras la modificación: \n")
+    res = libros.find({"genero": "Programación"})
+
+    for r in res:
+        pprint.pprint(r)
+
 def main():
     insertar_datos()
 
@@ -189,6 +272,12 @@ def main():
     ejercicio8()
 
     ejercicio9()
+
+    ejercicio10()
+
+    ejercicio11()
     
+    ejercicio12()
+
 if __name__ == "__main__":
     main()

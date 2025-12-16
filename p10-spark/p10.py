@@ -1,9 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
-import os
+from pathlib import Path
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+OUTPUT_DIR = BASE_DIR / "output"
 
 def main():
 
@@ -31,7 +33,7 @@ def main():
     # Otra forma de leer el csv sería:
     df = spark_session \
         .read \
-        .csv(path=os.path.join(DATA_PATH, "empleados.csv"),
+        .csv(path=str(DATA_DIR / "empleados.csv"),
              schema=schema, header=True)
 
 
@@ -85,9 +87,9 @@ def main():
     # EJERCICIO 8: FUNCIONES DE STRING
 
     df_ejercicio_8 = \
-        df.withColumn("nombre_upper", upper("nombre")) \
-        .withColumn("email", concat("nombre", lit("."), "apellido", lit("@empresa.com"))) \
-        .withColumn("tres_primeras", substring("apellido", 0, 3))
+        df.withColumn("nombre_upper", upper(col("nombre"))) \
+        .withColumn("email", concat(col("nombre"), lit("."), col("apellido"), lit("@empresa.com"))) \
+        .withColumn("tres_primeras", substring(col("apellido"), 1, 3))
     
     df_ejercicio_8.show()
 
@@ -112,7 +114,7 @@ def main():
 
     # EJERCICIO 11: ESCRITURA
 
-    df_ejercicio_8.write.csv("output", mode="overwrite")
+    df_ejercicio_8.write.csv(str(OUTPUT_DIR), mode="overwrite")
     
 if __name__ == "__main__":
-    main()
+    main() 
